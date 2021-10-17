@@ -15,6 +15,16 @@ class ChainError:
     exception: Exception
 
 
+class ChainErrorException(Exception):
+    def __init__(self, index, fn, arguments, original_exception, *args):
+        self.index = index
+        self.fn = fn
+        self.arguments = arguments
+        self.original_exception = original_exception
+        self.message = f"Exception raises on chain index: {self.index}. Fun: {self.fn}. Args: {self.arguments}"
+        super(ChainErrorException, self).__init__(self.message, *args)
+
+
 class Chain:
     """
     Chaining functions using pipe operators. The next function will receive
@@ -56,14 +66,20 @@ class Chain:
         return other
 
     def __call__(self, *args, **kwargs):
+        error_handler = self.get_on_error()
         if len(self.chains) == 0:
             # it means no pipe operator around
-            return self.fn(*self.args)
+            try:
+                return self.fn(*self.args)
+            except Exception as e:
+                if error_handler:
+                    return error_handler(ChainError(0, self.fn.__name__, self.args, e))
+                else:
+                    raise ChainErrorException(0, self.fn.__name__, self.args, e)
 
         first_chain = self.chains[0]
         res = first_chain.fn(*first_chain.args)
 
-        error_handler = self.get_on_error()
         for index, chain in enumerate(self.chains[1:], 1):
             try:
                 res = chain.fn(res, *chain.args)
@@ -71,6 +87,8 @@ class Chain:
                 if error_handler:
                     error = ChainError(index, chain.fn.__name__, chain.args, e)
                     return error_handler(error)
+                else:
+                    raise ChainErrorException(0, self.fn.__name__, self.args, e)
         return res
 
     @staticmethod

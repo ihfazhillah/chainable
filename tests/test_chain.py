@@ -1,6 +1,6 @@
 import pytest
 
-from src.chain import Chain, ChainArgumentNotCallable, chainable
+from src.chain import Chain, ChainArgumentNotCallable, chainable, ChainErrorException
 
 
 class TestChain:
@@ -78,3 +78,21 @@ class TestChain:
         chains.on_error(error_handler)
 
         assert chains() == (1, "should_raises", (), "Exception")
+
+    def test_exception_handler_for_no_chain(self):
+        @chainable
+        def exc(a):
+            raise Exception()
+
+        chain = exc(1)
+        chain.on_error(lambda x: x.exception.__class__.__name__)
+
+        assert chain() == "Exception"
+
+    def test_when_error_handler_not_defined_raise_chain_error_exception(self):
+        @chainable
+        def exc(a):
+            raise Exception()
+
+        with pytest.raises(ChainErrorException):
+            exc(10)()
