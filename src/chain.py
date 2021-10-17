@@ -55,6 +55,16 @@ class Chain:
     def _call_func(res: Any, chain):
         return chain.fn(res, *chain.args)
 
+    def __str__(self):
+        string = "chains of:\n"
+        if not self.chains:
+            string += f" {self.fn.__name__} - {self.args},\n"
+        else:
+            for chain in self.chains:
+                string += f" {chain.fn.__name__} - {chain.args},\n"
+        string += "]"
+        return string
+
 
 def chainable(fn):
     @functools.wraps(fn)
