@@ -55,5 +55,26 @@ class TestChain:
             return a + b
 
         chain = add(1, 2)
-        print(repr(chain))
         assert chain() == 3
+
+    def test_add_exception_handler_on_the_last_chain(self):
+        @chainable
+        def add(a, b):
+            return a + b
+
+        @chainable
+        def should_raises(x):
+            raise Exception(x)
+
+        def error_handler(chain_exception):
+            return (
+                chain_exception.index,
+                chain_exception.fn,
+                chain_exception.args,
+                chain_exception.exception.__class__.__name__,
+            )
+
+        chains = add(1, 2) | should_raises() | add(2, 3)
+        chains.on_error(error_handler)
+
+        assert chains() == (1, "should_raises", (), "Exception")

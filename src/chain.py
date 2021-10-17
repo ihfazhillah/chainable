@@ -1,9 +1,18 @@
+import dataclasses
 import functools
 from typing import Any
 
 
 class ChainArgumentNotCallable(Exception):
     pass
+
+
+@dataclasses.dataclass
+class ChainError:
+    index: int
+    fn: str
+    args: Any
+    exception: Exception
 
 
 class Chain:
@@ -32,6 +41,10 @@ class Chain:
 
         self.fn = fn
         self.args = args
+        self._on_error = None
+
+    def on_error(self, fn):
+        self._on_error = fn
 
     def __or__(self, other):
         left_most = len(self.chains) == 0
@@ -49,7 +62,16 @@ class Chain:
 
         first_chain = self.chains[0]
         res = first_chain.fn(*first_chain.args)
-        return functools.reduce(self._call_func, self.chains[1:], res)
+
+        error_handler = self.get_on_error()
+        for index, chain in enumerate(self.chains[1:], 1):
+            try:
+                res = chain.fn(res, *chain.args)
+            except Exception as e:
+                if error_handler:
+                    error = ChainError(index, chain.fn.__name__, chain.args, e)
+                    return error_handler(error)
+        return res
 
     @staticmethod
     def _call_func(res: Any, chain):
@@ -67,6 +89,9 @@ class Chain:
 
     def __repr__(self):
         return self.__str__()
+
+    def get_on_error(self):
+        return self._on_error
 
 
 def chainable(fn):
