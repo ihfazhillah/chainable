@@ -34,3 +34,25 @@ class TestChain:
 
         result = add(1, 2) | add(2) | multiply(10) | divide_by_10()
         assert result() == 5
+
+    def test_before_chain_called_dont_call_it_instead_add_to_internal_list(self):
+        @chainable
+        def add(a, b):
+            return a + b
+
+        @chainable
+        def multiply(a, b):
+            return a * b
+
+        chain = add(1, 2) | add(3) | multiply(4)
+        assert len(chain.chains) == 3
+
+        assert chain() == 24
+
+    def test_chainable_no_or_operator(self):
+        @chainable
+        def add(a, b):
+            return a + b
+
+        chain = add(1, 2)
+        assert chain() == 3

@@ -1,4 +1,5 @@
 import functools
+from typing import Any
 
 
 class ChainArgumentNotCallable(Exception):
@@ -9,9 +10,6 @@ class Chain:
     """
     Chaining functions using pipe operators. The next function will receive
     result of the previous function call as it first argument.
-
-    For now: all function will be called except the last one.
-    To get it's result, you should call it.
 
     ```python
     @chainable
@@ -26,6 +24,8 @@ class Chain:
     ```
     """
 
+    chains = []
+
     def __init__(self, fn, *args, **kwargs):
         if not callable(fn):
             raise ChainArgumentNotCallable
@@ -34,13 +34,26 @@ class Chain:
         self.args = args
 
     def __or__(self, other):
-        res = self.fn(*self.args)
-        other_args = [res, *other.args]
-        other.args = other_args
+        left_most = len(self.chains) == 0
+        if left_most:
+            other.chains = [self, other]
+        else:
+            other.chains = [*self.chains, other]
+
         return other
 
     def __call__(self, *args, **kwargs):
-        return self.fn(*self.args)
+        if len(self.chains) == 0:
+            # it means no pipe operator around
+            return self.fn(*self.args)
+
+        first_chain = self.chains[0]
+        res = first_chain.fn(*first_chain.args)
+        return functools.reduce(self._call_func, self.chains[1:], res)
+
+    @staticmethod
+    def _call_func(res: Any, chain):
+        return chain.fn(res, *chain.args)
 
 
 def chainable(fn):
