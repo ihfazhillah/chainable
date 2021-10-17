@@ -55,4 +55,5 @@ class TestChain:
             return a + b
 
         chain = add(1, 2)
+        print(repr(chain))
         assert chain() == 3

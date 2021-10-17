@@ -65,6 +65,9 @@ class Chain:
         string += "]"
         return string
 
+    def __repr__(self):
+        return self.__str__()
+
 
 def chainable(fn):
     @functools.wraps(fn)
