@@ -96,3 +96,17 @@ class TestChain:
 
         with pytest.raises(ChainErrorException):
             exc(10)()
+
+    def test_error_raised_when_first_chain_error(self):
+        @chainable
+        def exc(a):
+            raise Exception()
+
+        @chainable
+        def a(a, b):
+            return a
+
+        # when construction, no exception, because we not call any
+        chains = exc(1) | a(1)
+        with pytest.raises(ChainErrorException):
+            chains()

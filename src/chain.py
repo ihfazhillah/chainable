@@ -67,33 +67,25 @@ class Chain:
 
     def __call__(self, *args, **kwargs):
         error_handler = self.get_on_error()
-        if len(self.chains) == 0:
-            # it means no pipe operator around
-            try:
-                return self.fn(*self.args)
-            except Exception as e:
-                if error_handler:
-                    return error_handler(ChainError(0, self.fn.__name__, self.args, e))
-                else:
-                    raise ChainErrorException(0, self.fn.__name__, self.args, e)
+        index = 0
+        try:
+            chain = self.chains[0]
+        except IndexError:
+            chain = self
 
-        first_chain = self.chains[0]
-        res = first_chain.fn(*first_chain.args)
+        try:
+            result = chain.fn(*chain.args)
+            if not self.chains:
+                return result
 
-        for index, chain in enumerate(self.chains[1:], 1):
-            try:
-                res = chain.fn(res, *chain.args)
-            except Exception as e:
-                if error_handler:
-                    error = ChainError(index, chain.fn.__name__, chain.args, e)
-                    return error_handler(error)
-                else:
-                    raise ChainErrorException(0, self.fn.__name__, self.args, e)
-        return res
-
-    @staticmethod
-    def _call_func(res: Any, chain):
-        return chain.fn(res, *chain.args)
+            for index, chain in enumerate(self.chains[1:], 1):
+                result = chain.fn(result, *chain.args)
+        except Exception as e:
+            error_args = [index, chain.fn.__name__, chain.args, e]
+            if error_handler:
+                return error_handler(ChainError(*error_args))
+            raise ChainErrorException(*error_args)
+        return result
 
     def __str__(self):
         string = "chains of:\n"
