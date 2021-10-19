@@ -110,3 +110,15 @@ class TestChain:
         chains = exc(1) | a(1)
         with pytest.raises(ChainErrorException):
             chains()
+
+    def test_first_chain_no_attribute(self):
+        @chainable
+        def first():
+            return 10
+
+        @chainable
+        def second(a):
+            return a
+
+        chains = first() | second()
+        assert chains() == 10
